@@ -1,12 +1,11 @@
-
 spring:
   application:
     name: portfolio-backend
   datasource:
-    url: jdbc:postgresql://localhost:5432/portfolio_db
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/portfolio_db}
     driver-class-name: org.postgresql.Driver
-    username: postgres
-    password: Ff6136581
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:Ff6136581}
   jpa:
     hibernate:
       ddl-auto: update
@@ -20,11 +19,26 @@ spring:
       enabled: true
       path: /h2-console
 
-server:
-  port: 8080
+  ai:
+    openai:
+      api-key: ${GROQ_API_KEY}
+      base-url: https://api.groq.com/openai
+      chat:
+        options:
+          model: llama-3.1-8b-instant
 
-qdrant:
-  url: "https://d4f98c22-82e6-4b27-9dae-43190b10a888.eu-west-1-0.aws.cloud.qdrant.io"
-  api-key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.puHIeQ2f96G9lsCGjz8jUc3ujHTW5rJb-YI8La1UOTU"
-groq:
-  api-key: "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"
+    transformers:
+      embedding:
+        model: classpath:/models/all-MiniLM-L6-v2
+        dimensions: 384
+
+    vectorstore:
+      qdrant:
+        host: ${QDRANT_HOST:d4f98c22-82e6-4b27-9dae-43190b10a888.eu-west-1-0.aws.cloud.qdrant.io}
+        port: ${QDRANT_PORT:6334}
+        use-tls: true
+        api-key: ${QDRANT_API_KEY}
+        collection-name: portfolio_docs
+
+server:
+  port: ${SERVER_PORT:8080}

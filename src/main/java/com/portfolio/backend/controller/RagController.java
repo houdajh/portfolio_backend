@@ -1,78 +1,31 @@
 package com.portfolio.backend.controller;
 
-import com.portfolio.backend.service.EmbeddingService;
-import com.portfolio.backend.service.LlmService;
-import com.portfolio.backend.service.QdrantSearchService;
-import org.springframework.web.bind.annotation.*;
+import com.portfolio.backend.service.RagService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/rag")
+@RequiredArgsConstructor
 public class RagController {
 
-    private final QdrantSearchService qdrant;
-    private final EmbeddingService embeddingService;
-    private final LlmService llmService;
+    private final RagService ragService;
 
-    public RagController(QdrantSearchService qdrant, EmbeddingService embeddingService, LlmService llmService) {
-        this.qdrant = qdrant;
-        this.embeddingService = embeddingService;
-        this.llmService = llmService;
+    public record RagRequest(String question, Integer topK) {
     }
 
-
-    @PostMapping("/test-embed")
-    public float[] testEmbed(@RequestBody Map<String, String> body) throws Exception {
-        return embeddingService.embed(body.get("text"));
+    public record RagHttpResponse(String answer, List<RagService.RagSource> sources) {
     }
 
-
-    @PostMapping("/search")
-    public List<Map<String, Object>> searchRag(@RequestBody Map<String, String> body) throws Exception {
-
-        String question = body.get("question");
-
-        if (question == null || question.isBlank()) {
-            throw new IllegalArgumentException("Missing field: question");
-        }
-
-        // 1) Embed the question
-        float[] embeddings = embeddingService.embed(question);
-
-        // 2) Search Qdrant
-        return qdrant.search(embeddings);
+    @PostMapping("/ask")
+    public RagHttpResponse ask(@RequestBody RagRequest payload) {
+        int topK = payload.topK() != null ? payload.topK() : 5;
+        var response = ragService.ask(payload.question(), topK);
+        return new RagHttpResponse(response.answer(), response.sources());
     }
-
-
-
-    @PostMapping("/chat")
-    public Map<String, Object> chat(@RequestBody Map<String, String> body) throws Exception {
-
-        String question = body.get("question");
-
-        // 1) Embed + Qdrant
-        float[] embedding = embeddingService.embed(question);
-        List<Map<String, Object>> docs = qdrant.search(embedding);
-
-        // 2) Build context from payload
-        StringBuilder context = new StringBuilder();
-        for (Map<String, Object> doc : docs) {
-            Map payload = (Map) doc.get("payload");
-            if (payload != null && payload.get("text") != null) {
-                context.append(payload.get("text")).append("\n\n");
-            }
-        }
-
-        // 3) Ask Groq
-        String answer = llmService.askGroq(question, context.toString());
-
-        return Map.of(
-                "answer", answer,
-                "sources", docs
-        );
-    }
-
-
 }

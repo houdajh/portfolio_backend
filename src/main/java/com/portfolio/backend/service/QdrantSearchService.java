@@ -1,42 +1,47 @@
 package com.portfolio.backend.service;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.vectorstore.SearchRequest;
+import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 import java.util.Map;
+
 @Service
 public class QdrantSearchService {
 
-    @Value("${qdrant.url}")
-    private String qdrantUrl;
+    private final VectorStore vectorStore;
 
-    @Value("${qdrant.api-key}")
-    private String apiKey;
+    public QdrantSearchService(VectorStore vectorStore) {
+        this.vectorStore = vectorStore;
+    }
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    /**
+     * Indexe un document texte avec des métadonnées.
+     */
+    public void index(String content, Map<String, Object> metadata) {
+        Document doc = new Document(content, metadata);
+        vectorStore.add(List.of(doc));
+    }
 
-    public List<Map<String, Object>> search(float[] embedding) {
-        Map<String, Object> request = Map.of(
-                "vector", embedding,
-                "limit", 5,
-                "with_payload", true
-        );
+    /**
+     * Overload simple avec topK par défaut.
+     */
+    public List<Document> search(String query) {
+        return search(query, 5);
+    }
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("api-key", apiKey);
-        headers.setContentType(MediaType.APPLICATION_JSON);
+    /**
+     * Semantic search avec topK paramétrable.
+     */
+    public List<Document> search(String query, int topK) {
+        SearchRequest request = SearchRequest.builder()
+                .query(query)
+                .topK(topK)
+                .build();
 
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
-        String url = qdrantUrl + "/collections/portfolio_docs/points/search";
-
-        ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
-
-        return (List<Map<String, Object>>) response.getBody().get("result");
+        return vectorStore.similaritySearch(request);
     }
 }
+
