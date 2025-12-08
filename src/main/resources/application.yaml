@@ -1,6 +1,6 @@
 spring:
   application:
-    name: portfolio-backend
+    name: devBrain-backend
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/portfolio_db}
     driver-class-name: org.postgresql.Driver
@@ -18,27 +18,24 @@ spring:
     console:
       enabled: true
       path: /h2-console
-
   ai:
     openai:
-      api-key: ${GROQ_API_KEY}
+      api-key: ${GROQ_API_KEY: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}
       base-url: https://api.groq.com/openai
       chat:
         options:
           model: llama-3.1-8b-instant
-
-    transformers:
-      embedding:
-        model: classpath:/models/all-MiniLM-L6-v2
-        dimensions: 384
+    model:
+      embedding: transformers
 
     vectorstore:
       qdrant:
         host: ${QDRANT_HOST:d4f98c22-82e6-4b27-9dae-43190b10a888.eu-west-1-0.aws.cloud.qdrant.io}
         port: ${QDRANT_PORT:6334}
         use-tls: true
-        api-key: ${QDRANT_API_KEY}
+        api-key: ${QDRANT_API_KEY:eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.puHIeQ2f96G9lsCGjz8jUc3ujHTW5rJb-YI8La1UOTU}
         collection-name: portfolio_docs
+        initialize-schema: true
 
 server:
   port: ${SERVER_PORT:8080}
