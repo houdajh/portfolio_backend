@@ -17,16 +17,17 @@ public class ProjectService {
     }
 
     public List<ProjectCardDto> getAllProjects() {
-        return repository.findAll().stream()
+        return repository.findAllByOrderByStartDateDesc()
+                .stream()
                 .map(p -> new ProjectCardDto(
                         p.getId(),
                         p.getSlug(),
                         p.getTitle(),
-                        p.getHighlight(),
                         p.getShortDescription(),
-                        p.getTags()
-                ))
-                .toList();
+                        p.getTags(),
+                        p.getStartDate(),
+                        p.getEndDate()
+                )).toList();
     }
 
     public ProjectDetailDto getProjectBySlug(String slug) {
@@ -37,7 +38,6 @@ public class ProjectService {
                 p.getId(),
                 p.getSlug(),
                 p.getTitle(),
-                p.getHighlight(),
                 p.getShortDescription(),
                 p.getDetails(),
                 p.getTags(),

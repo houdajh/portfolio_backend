@@ -1,8 +1,10 @@
+// src/main/java/com/devBrain/backend/controller/LibraryController.java
 package com.devBrain.backend.controller;
 
+import com.devBrain.backend.dto.LibraryFolderDto;
 import com.devBrain.backend.dto.LibraryItemCardDto;
-import com.devBrain.backend.dto.LibraryItemDetailDto;
 import com.devBrain.backend.service.LibraryService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,13 +19,17 @@ public class LibraryController {
         this.service = service;
     }
 
-    @GetMapping
-    public List<LibraryItemCardDto> getLibrary() {
-        return service.getAllItems();
+    @GetMapping("/list")
+    public List<LibraryFolderDto> list() {
+        return service.listFolders();
     }
 
-    @GetMapping("/{id}")
-    public LibraryItemDetailDto getLibraryItem(@PathVariable Long id) {
-        return service.getItem(id);
+
+
+    // Optionnel : exposer un endpoint pour un fichier markdown spécifique
+    @GetMapping("/md/{fileName}")
+    public ResponseEntity<String> getMarkdown(@PathVariable String fileName) {
+        String content = service.loadMarkdownRaw(fileName);
+        return ResponseEntity.ok(content);
     }
 }

@@ -5,6 +5,8 @@ package com.devBrain.backend.model;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
+
 @Entity
 @Table(name = "projects")
 @Data
@@ -18,7 +20,6 @@ public class Project {
 
     private String slug;
     private String title;
-    private String highlight;
 
     @Column(length = 2000)
     private String shortDescription;
@@ -30,4 +31,7 @@ public class Project {
 
     private String githubUrl;
     private String demoUrl;
+
+    private LocalDate startDate;
+    private LocalDate endDate; // null if still ongoing
 }

@@ -2,17 +2,19 @@ spring:
   application:
     name: devBrain-backend
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/portfolio_db}
+    url: jdbc:postgresql://ep-bold-brook-a4jfrzvf-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require
+    username: neondb_owner
+    password: npg_LKgs2tqNI6VM
     driver-class-name: org.postgresql.Driver
-    username: ${SPRING_DATASOURCE_USERNAME:postgres}
-    password: ${SPRING_DATASOURCE_PASSWORD:Ff6136581}
+
   jpa:
     hibernate:
       ddl-auto: update
+    show-sql: true
     properties:
       hibernate:
         format_sql: true
-    show-sql: true
+
 
   h2:
     console:
@@ -39,3 +41,12 @@ spring:
 
 server:
   port: ${SERVER_PORT:8080}
+
+app:
+  library:
+    github:
+      owner: houdajh
+      repo: rag-data
+      branch: master
+      base-path: library
+      token: ${GITHUB_TOKEN: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} # laisser vide en local si repo public

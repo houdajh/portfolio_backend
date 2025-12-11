@@ -1,10 +1,13 @@
 package com.devBrain.backend.dto;
 
+import java.time.LocalDate;
+
 public record ProjectCardDto(
         Long id,
         String slug,
         String title,
-        String highlight,
         String shortDescription,
-        String tags
+        String tags,
+        LocalDate startDate,
+        LocalDate endDate
 ) { }

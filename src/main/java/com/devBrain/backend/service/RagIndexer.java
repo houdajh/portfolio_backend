@@ -3,10 +3,6 @@ package com.devBrain.backend.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Map;
 
 @Service
@@ -14,24 +10,20 @@ import java.util.Map;
 public class RagIndexer {
 
     private final QdrantSearchService qdrant;
+    private final GitHubContentService github;
 
-    public void reindex() throws IOException {
-        Path folder = Paths.get("rag-data");
+    public void reindex() {
 
-        try (var files = Files.list(folder)) {
-            files.filter(f -> f.toString().endsWith(".md"))
-                 .forEach(f -> {
-                     try {
-                         String content = Files.readString(f);
-                         Map<String, Object> metadata = Map.of(
-                                 "filename", f.getFileName().toString()
-                         );
+        var mdFiles = github.listAllMarkdownFiles();
 
-                         qdrant.index(content, metadata);
-                     } catch (Exception e) {
-                         throw new RuntimeException(e);
-                     }
-                 });
+        for (var f : mdFiles) {
+            String content = github.download(f);
+
+            qdrant.index(content, Map.of(
+                    "filename", f.name(),
+                    "path", f.path(),
+                    "source", "github"
+            ));
         }
     }
 }
