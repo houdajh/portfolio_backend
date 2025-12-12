@@ -2,8 +2,11 @@ FROM eclipse-temurin:17-jre
 
 WORKDIR /app
 
-COPY target/*.jar app.jar
+# Copy everything
+COPY . .
 
-ENV JAVA_OPTS=""
+# Build WITHOUT tests
+RUN ./mvnw clean package -DskipTests
 
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+# Run the app
+ENTRYPOINT ["java", "-jar", "target/portfolio-backend-0.0.1-SNAPSHOT.jar"]
