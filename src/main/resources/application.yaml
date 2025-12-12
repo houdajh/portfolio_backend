@@ -1,41 +1,35 @@
 spring:
   application:
     name: devBrain-backend
+
   datasource:
-    url: jdbc:postgresql://ep-bold-brook-a4jfrzvf-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require
-    username: neondb_owner
-    password: npg_LKgs2tqNI6VM
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
+      ddl-auto: validate
+    show-sql: false
 
-
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
   ai:
     openai:
-      api-key: ${GROQ_API_KEY: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}
+      api-key: ${GROQ_API_KEY}
       base-url: https://api.groq.com/openai
       chat:
         options:
           model: llama-3.1-8b-instant
+
     model:
       embedding: transformers
 
     vectorstore:
       qdrant:
-        host: ${QDRANT_HOST:d4f98c22-82e6-4b27-9dae-43190b10a888.eu-west-1-0.aws.cloud.qdrant.io}
+        host: ${QDRANT_HOST}
         port: ${QDRANT_PORT:6334}
         use-tls: true
-        api-key: ${QDRANT_API_KEY:eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.puHIeQ2f96G9lsCGjz8jUc3ujHTW5rJb-YI8La1UOTU}
+        api-key: ${QDRANT_API_KEY}
         collection-name: portfolio_docs
         initialize-schema: true
 
@@ -49,4 +43,4 @@ app:
       repo: rag-data
       branch: master
       base-path: library
-      token: ${GITHUB_TOKEN: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} # laisser vide en local si repo public
+      token: ${GITHUB_TOKEN}
