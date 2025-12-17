@@ -15,20 +15,12 @@ spring:
 
   ai:
     openai:
-      api-key: ${GROQ_API_KEY}
-      base-url: https://api.groq.com/openai
-      chat:
-        options:
-          model: llama-3.1-8b-instant
-
-    model:
-      embedding: transformers
+      api-key: ${VOYAGE_API_KEY}
+      base-url: https://api.voyageai.com
 
     vectorstore:
       qdrant:
-        host: ${QDRANT_HOST}
-        port: ${QDRANT_PORT:6334}
-        use-tls: true
+        url: ${QDRANT_URL}
         api-key: ${QDRANT_API_KEY}
         collection-name: portfolio_docs
         initialize-schema: true

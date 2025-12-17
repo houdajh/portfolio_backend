@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
-
 @Service
 @RequiredArgsConstructor
 public class RagIndexer {
@@ -16,6 +15,8 @@ public class RagIndexer {
 
         var mdFiles = github.listAllMarkdownFiles();
 
+        int count = 0;
+
         for (var f : mdFiles) {
             String content = github.download(f);
 
@@ -24,6 +25,17 @@ public class RagIndexer {
                     "path", f.path(),
                     "source", "github"
             ));
+
+            count++;
+            System.out.println("Indexed " + count + "/" + mdFiles.size() + " : " + f.path());
+
+            // 🔴 HARD throttle — Voyage safe
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException("Reindex interrupted", e);
+            }
         }
     }
 }
