@@ -2,6 +2,7 @@ package com.devBrain.backend.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.document.Document;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -10,10 +11,17 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
+@ConditionalOnProperty(
+        name = "app.rag.enabled",
+        havingValue = "true",
+        matchIfMissing = false
+)
 public class RagService {
 
     private final QdrantSearchService qdrantSearchService;
     private final LlmService llmService;
+
+
 
     public RagResponse ask(String question, int topK) {
         if (question == null || question.isBlank()) {

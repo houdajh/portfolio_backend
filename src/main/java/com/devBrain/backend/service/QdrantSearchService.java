@@ -6,8 +6,6 @@ import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 
 @Service
 public class QdrantSearchService {
@@ -18,40 +16,24 @@ public class QdrantSearchService {
         this.vectorStore = vectorStore;
     }
 
-    /**
-     * Indexe un document texte avec des métadonnées.
-     */
-    public void index(String content, Map<String, Object> metadata) {
-        Document doc = new Document(
-                UUID.randomUUID().toString(), // id
-                content,                      // text
-                metadata                      // metadata
-        );
-
-        vectorStore.add(List.of(doc));
+    public void index(List<Document> documents) {
+        int batchSize = 20;
+        for (int i = 0; i < documents.size(); i += batchSize) {
+            int end = Math.min(i + batchSize, documents.size());
+            System.out.println("INDEXING DOC: " + documents.get(i).getText().substring(0, 50));
+            vectorStore.add(documents.subList(i, end));
+        }
     }
 
 
-
-    /**
-     * Overload simple avec topK par défaut.
-     */
-    public List<Document> search(String query) {
-        return search(query, 5);
-    }
-
-    /**
-     * Semantic search avec topK paramétrable.
-     */
     public List<Document> search(String query, int topK) {
-        SearchRequest request = SearchRequest.builder()
-                .query(query)
-                .topK(topK)
-                .build();
-
-        return vectorStore.similaritySearch(request);
+        return vectorStore.similaritySearch(
+                SearchRequest.builder()
+                        .query(query)
+                        .topK(topK)
+                        .build()
+        );
     }
-
 
 }
 

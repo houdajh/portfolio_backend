@@ -2,6 +2,7 @@ package com.devBrain.backend.controller;
 
 import com.devBrain.backend.service.RagService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -11,6 +12,11 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/rag")
+@ConditionalOnProperty(
+        name = "app.rag.enabled",
+        havingValue = "true",
+        matchIfMissing = false
+)
 @RequiredArgsConstructor
 public class RagController {
 
