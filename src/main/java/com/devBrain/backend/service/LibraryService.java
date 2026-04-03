@@ -83,12 +83,16 @@ public class LibraryService {
         List<LibraryItemCardDto> items = new ArrayList<>();
 
         for (JsonNode node : json) {
+            if (!node.has("type") || !node.has("name") || !node.has("download_url")) {
+                continue;
+            }
+
             if (!"file".equals(node.get("type").asText())) {
                 continue;
             }
 
-            String name = node.get("name").asText();             // ex: Comparable vs Comparator.pdf
-            String downloadUrl = node.get("download_url").asText(); // RAW URL GitHub
+            String name = node.get("name").asText();
+            String downloadUrl = node.get("download_url").asText();
 
             String title = name.replace(".pdf", "").replace(".md", "");
             String category = guessCategoryFromPath(subFolder, title);
@@ -174,7 +178,7 @@ public class LibraryService {
 
     private List<String> fetchFoldersFromGitHub() throws Exception {
         String apiUrl = "https://api.github.com/repos/" + owner + "/" + repo
-                + "/contents/" + basePath + "/pdf";
+                + "/contents/" + basePath + "/pdf?ref=" + branch;
 
         HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(URI.create(apiUrl))
@@ -189,6 +193,10 @@ public class LibraryService {
 
         List<String> folders = new ArrayList<>();
         for (JsonNode node : json) {
+            if (!node.has("type") || !node.has("name")) {
+                continue;
+            }
+
             if ("dir".equals(node.get("type").asText())) {
                 folders.add(node.get("name").asText());
             }
@@ -199,7 +207,7 @@ public class LibraryService {
     private List<LibraryItemCardDto> fetchFilesInFolder(String folder) throws Exception {
 
         String apiUrl = "https://api.github.com/repos/" + owner + "/" + repo
-                + "/contents/" + basePath + "/pdf/" + folder;
+                + "/contents/" + basePath + "/pdf?ref=" + branch;
 
         HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(URI.create(apiUrl))
@@ -214,8 +222,13 @@ public class LibraryService {
         List<LibraryItemCardDto> items = new ArrayList<>();
 
         for (JsonNode node : json) {
-            if (!node.get("name").asText().endsWith(".pdf"))
+            if (!node.has("name") || !node.has("download_url")) {
                 continue;
+            }
+
+            String name = node.get("name").asText();
+
+            if (!name.endsWith(".pdf")) continue;
 
             items.add(new LibraryItemCardDto(
                     node.get("name").asText().replace(".pdf", ""),
