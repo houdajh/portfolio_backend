@@ -1,4 +1,3 @@
-// src/main/java/com/devBrain/backend/service/LibraryService.java
 package com.devBrain.backend.service;
 
 import com.devBrain.backend.dto.LibraryFolderDto;
@@ -42,129 +41,12 @@ public class LibraryService {
         this.token = token;
     }
 
-    // =============== LIST ===============
-
-    public List<LibraryItemCardDto> listItems() {
-        try {
-            List<LibraryItemCardDto> result = new ArrayList<>();
-
-            result.addAll(fetchFromGitHubFolder("pdf", false));
-
-
-            return result;
-        } catch (Exception e) {
-            throw new RuntimeException("Unable to list library items from GitHub", e);
-        }
-    }
-
-    private List<LibraryItemCardDto> fetchFromGitHubFolder(String subFolder, boolean usedInRag) throws Exception {
-        String apiUrl = "https://api.github.com/repos/" + owner + "/" + repo
-                + "/contents/" + basePath + "/" + subFolder
-                + "?ref=" + branch;
-
-        HttpRequest.Builder builder = HttpRequest.newBuilder()
-                .uri(URI.create(apiUrl))
-                .GET();
-
-        if (!token.isBlank()) {
-            builder.header("Authorization", "Bearer " + token);
-        }
-
-        HttpResponse<String> response = httpClient.send(
-                builder.build(),
-                HttpResponse.BodyHandlers.ofString()
-        );
-
-        if (response.statusCode() >= 400) {
-            throw new RuntimeException("GitHub API error " + response.statusCode() + " for " + apiUrl);
-        }
-
-        JsonNode json = objectMapper.readTree(response.body());
-        List<LibraryItemCardDto> items = new ArrayList<>();
-
-        for (JsonNode node : json) {
-            if (!node.has("type") || !node.has("name") || !node.has("download_url")) {
-                continue;
-            }
-
-            if (!"file".equals(node.get("type").asText())) {
-                continue;
-            }
-
-            String name = node.get("name").asText();
-            String downloadUrl = node.get("download_url").asText();
-
-            String title = name.replace(".pdf", "").replace(".md", "");
-            String category = guessCategoryFromPath(subFolder, title);
-            String tags = category; // simpliste, tu pourras améliorer
-
-            items.add(new LibraryItemCardDto(
-                    title,
-                    category,
-                    downloadUrl,  // <--- FRONT utilisera directement cette URL
-                    tags,
-                    usedInRag
-            ));
-        }
-
-        return items;
-    }
-
-    // =============== DETAIL (Markdown) ===============
-
-    public String loadMarkdownRaw(String fileName) {
-        try {
-            String rawUrl = "https://raw.githubusercontent.com/" + owner + "/" + repo + "/" + branch
-                    + "/" + basePath + "/md/" + encodePathPart(fileName);
-
-            HttpRequest.Builder builder = HttpRequest.newBuilder()
-                    .uri(URI.create(rawUrl))
-                    .GET();
-
-            if (!token.isBlank()) {
-                builder.header("Authorization", "Bearer " + token);
-            }
-
-            HttpResponse<String> response = httpClient.send(
-                    builder.build(),
-                    HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
-            );
-
-            if (response.statusCode() >= 400) {
-                throw new RuntimeException("GitHub RAW error " + response.statusCode() + " for " + rawUrl);
-            }
-
-            return response.body();
-        } catch (Exception e) {
-            throw new RuntimeException("Unable to load markdown from GitHub", e);
-        }
-    }
-
-    // =============== UTILS ===============
-
-    private String encodePathPart(String s) {
-        return s.replace(" ", "%20");
-    }
-
-    private String guessCategoryFromPath(String subFolder, String title) {
-        // Tu pourras faire mieux plus tard (backend, threads, design pattern, etc.)
-        if (title.toLowerCase().contains("spring") || title.toLowerCase().contains("java")) {
-            return "Backend";
-        }
-        if (subFolder.equals("md")) {
-            return "Notes";
-        }
-        return "Library";
-    }
-
     public List<LibraryFolderDto> listFolders() {
         try {
             List<LibraryFolderDto> folders = new ArrayList<>();
 
-            // 1. read list of folder names in /library/pdf
             List<String> folderNames = fetchFoldersFromGitHub();
 
-            // 2. for each folder, list files inside
             for (String folder : folderNames) {
                 List<LibraryItemCardDto> files = fetchFilesInFolder(folder);
                 folders.add(new LibraryFolderDto(folder, files));
@@ -182,58 +64,98 @@ public class LibraryService {
 
         HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(URI.create(apiUrl))
+                .header("Accept", "application/vnd.github+json")
+                .header("X-GitHub-Api-Version", "2022-11-28")
                 .GET();
 
-        if (!token.isBlank()) builder.header("Authorization", "Bearer " + token);
+        if (token != null && !token.isBlank()) {
+            builder.header("Authorization", "Bearer " + token.trim());
+        }
 
         HttpResponse<String> response =
                 httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
 
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            throw new IllegalStateException(
+                    "GitHub API call failed. Status: " + response.statusCode() + ", body: " + response.body()
+            );
+        }
+
         JsonNode json = objectMapper.readTree(response.body());
+
+        if (!json.isArray()) {
+            throw new IllegalStateException(
+                    "Unexpected GitHub API response. Expected JSON array but got: " + json.getNodeType()
+            );
+        }
 
         List<String> folders = new ArrayList<>();
         for (JsonNode node : json) {
-            if (!node.has("type") || !node.has("name")) {
-                continue;
-            }
+            String type = node.path("type").asText();
+            String name = node.path("name").asText();
 
-            if ("dir".equals(node.get("type").asText())) {
-                folders.add(node.get("name").asText());
+            if ("dir".equals(type) && !name.isBlank()) {
+                folders.add(name);
             }
         }
+
         return folders;
     }
 
     private List<LibraryItemCardDto> fetchFilesInFolder(String folder) throws Exception {
-
         String apiUrl = "https://api.github.com/repos/" + owner + "/" + repo
-                + "/contents/" + basePath + "/pdf?ref=" + branch;
+                + "/contents/" + basePath + "/pdf/" + encodePathPart(folder) + "?ref=" + branch;
 
         HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(URI.create(apiUrl))
+                .header("Accept", "application/vnd.github+json")
+                .header("X-GitHub-Api-Version", "2022-11-28")
                 .GET();
 
-        if (!token.isBlank()) builder.header("Authorization", "Bearer " + token);
+        if (token != null && !token.isBlank()) {
+            builder.header("Authorization", "Bearer " + token.trim());
+        }
 
         HttpResponse<String> response =
                 httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
 
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            throw new IllegalStateException(
+                    "GitHub API call failed. Status: " + response.statusCode() + ", body: " + response.body()
+            );
+        }
+
         JsonNode json = objectMapper.readTree(response.body());
+
+        if (!json.isArray()) {
+            throw new IllegalStateException(
+                    "Unexpected GitHub API response. Expected JSON array but got: " + json.getNodeType()
+            );
+        }
+
         List<LibraryItemCardDto> items = new ArrayList<>();
 
         for (JsonNode node : json) {
-            if (!node.has("name") || !node.has("download_url")) {
+            String type = node.path("type").asText();
+            String name = node.path("name").asText();
+            String downloadUrl = node.path("download_url").asText();
+
+            if (!"file".equals(type)) {
                 continue;
             }
 
-            String name = node.get("name").asText();
+            if (!name.toLowerCase().endsWith(".pdf")) {
+                continue;
+            }
 
-            if (!name.endsWith(".pdf")) continue;
+            if (downloadUrl == null || downloadUrl.isBlank()) {
+                continue;
+            }
 
             items.add(new LibraryItemCardDto(
-                    node.get("name").asText().replace(".pdf", ""),
+                    name.replace(".pdf", ""),
                     folder,
-                    node.get("download_url").asText(),
+                    downloadUrl,
                     folder,
                     false
             ));
@@ -242,4 +164,104 @@ public class LibraryService {
         return items;
     }
 
+    private List<LibraryItemCardDto> fetchFromGitHubFolder(String subFolder, boolean usedInRag) throws Exception {
+        String apiUrl = "https://api.github.com/repos/" + owner + "/" + repo
+                + "/contents/" + basePath + "/" + subFolder
+                + "?ref=" + branch;
+
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
+                .uri(URI.create(apiUrl))
+                .header("Accept", "application/vnd.github+json")
+                .header("X-GitHub-Api-Version", "2022-11-28")
+                .GET();
+
+        if (token != null && !token.isBlank()) {
+            builder.header("Authorization", "Bearer " + token.trim());
+        }
+
+        HttpResponse<String> response = httpClient.send(
+                builder.build(),
+                HttpResponse.BodyHandlers.ofString()
+        );
+
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            throw new RuntimeException("GitHub API error " + response.statusCode() + " for " + apiUrl);
+        }
+
+        JsonNode json = objectMapper.readTree(response.body());
+        List<LibraryItemCardDto> items = new ArrayList<>();
+
+        if (!json.isArray()) {
+            return items;
+        }
+
+        for (JsonNode node : json) {
+            if (!node.has("type") || !node.has("name") || !node.has("download_url")) {
+                continue;
+            }
+
+            if (!"file".equals(node.get("type").asText())) {
+                continue;
+            }
+
+            String name = node.get("name").asText();
+            String downloadUrl = node.get("download_url").asText();
+
+            String title = name.replace(".pdf", "").replace(".md", "");
+            String category = guessCategoryFromPath(subFolder, title);
+            String tags = category;
+
+            items.add(new LibraryItemCardDto(
+                    title,
+                    category,
+                    downloadUrl,
+                    tags,
+                    usedInRag
+            ));
+        }
+
+        return items;
+    }
+
+    public String loadMarkdownRaw(String fileName) {
+        try {
+            String rawUrl = "https://raw.githubusercontent.com/" + owner + "/" + repo + "/" + branch
+                    + "/" + basePath + "/md/" + encodePathPart(fileName);
+
+            HttpRequest.Builder builder = HttpRequest.newBuilder()
+                    .uri(URI.create(rawUrl))
+                    .GET();
+
+            if (token != null && !token.isBlank()) {
+                builder.header("Authorization", "Bearer " + token.trim());
+            }
+
+            HttpResponse<String> response = httpClient.send(
+                    builder.build(),
+                    HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
+            );
+
+            if (response.statusCode() >= 400) {
+                throw new RuntimeException("GitHub RAW error " + response.statusCode() + " for " + rawUrl);
+            }
+
+            return response.body();
+        } catch (Exception e) {
+            throw new RuntimeException("Unable to load markdown from GitHub", e);
+        }
+    }
+
+    private String encodePathPart(String s) {
+        return s.replace(" ", "%20");
+    }
+
+    private String guessCategoryFromPath(String subFolder, String title) {
+        if (title.toLowerCase().contains("spring") || title.toLowerCase().contains("java")) {
+            return "Backend";
+        }
+        if ("md".equals(subFolder)) {
+            return "Notes";
+        }
+        return "Library";
+    }
 }
