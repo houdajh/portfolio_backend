@@ -34,6 +34,7 @@ public class QdrantConfig {
 
         return QdrantVectorStore.builder(client, embeddingModel)
                 .collectionName(collectionName)
+                .initializeSchema(true)
                 .build();
     }
 }
