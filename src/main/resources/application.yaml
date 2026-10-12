@@ -24,7 +24,7 @@ spring:
 
     vectorstore:
       qdrant:
-        url: https://e80f5f2c-8892-4af2-a3ff-6d04da7df7db.sa-east-1-0.aws.cloud.qdrant.io
+        url: ${SPRING_AI_VECTORSTORE_QDRANT_URL}
         api-key: ${SPRING_AI_VECTORSTORE_QDRANT_API_KEY}
         collection-name: portfolio_docs
         initialize-schema: false
