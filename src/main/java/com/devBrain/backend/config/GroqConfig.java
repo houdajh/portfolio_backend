@@ -17,6 +17,7 @@ public class GroqConfig {
     @Bean
     public ChatClient groqChatClient(
             @Value("${GROQ_API_KEY}") String apiKey,
+            @Value("${GROQ_MODEL:openai/gpt-oss-20b}") String model,
             ToolCallingManager toolCallingManager,
             RetryTemplate retryTemplate,
             ObservationRegistry observationRegistry
@@ -30,7 +31,7 @@ public class GroqConfig {
         OpenAiChatModel chatModel = new OpenAiChatModel(
                 openAiApi,
                 OpenAiChatOptions.builder()
-                        .model("llama-3.1-8b-instant")
+                        .model(model)
                         .build(),
                 toolCallingManager,
                 retryTemplate,
