@@ -1,0 +1,11 @@
+spring:
+  ai:
+    model:
+      embedding: transformers   # OR openai if you want
+    vectorstore:
+      qdrant:
+        host: ${QDRANT_HOST}
+        port: 6334
+        api-key: ${QDRANT_API_KEY}
+        collection-name: portfolio_docs
+        initialize-schema: true

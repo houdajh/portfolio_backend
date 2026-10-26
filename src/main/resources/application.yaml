@@ -35,6 +35,10 @@ server:
 app:
   rag:
     enabled: true
+    admin-token: ${RAG_ADMIN_TOKEN}
+    unavailable-message: "The assistant is temporarily unavailable — you can reach me through the Contact button."
+  llm:
+    max-answer-chars: 600
   library:
     github:
       owner: houdajh

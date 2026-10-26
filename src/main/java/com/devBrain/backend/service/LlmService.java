@@ -2,6 +2,7 @@ package com.devBrain.backend.service;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -9,8 +10,12 @@ public class LlmService {
 
     private final ChatClient chatClient;
 
-    public LlmService(@Qualifier("groqChatClient") ChatClient chatClient) {
+    public LlmService(
+            @Qualifier("groqChatClient") ChatClient chatClient,
+            @Value("${app.llm.max-answer-chars}") int maxAnswerChars
+    ) {
         this.chatClient = chatClient;
+        this.maxAnswerChars = maxAnswerChars;
     }
 
     private static final String SYSTEM_PROMPT = """
@@ -39,14 +44,40 @@ public class LlmService {
             BEHAVIOR RULES:
             1. Never invent personal daily activities or real-time actions.
             2. Do not introduce yourself unless explicitly asked.
-            3. Keep answers short, natural, and professional.
-            4. Use the RAG context ONLY for factual information related to Houda.
-            5. If unsure, answer: "I don't know based on the available information."
+            3. Use the RAG context ONLY for factual information related to Houda.
+            4. If unsure, answer: "I don't know based on the available information."
 
             EXPERIENCE RULE:
             - Houda started her professional experience in 2023.
             - Compute the number of years dynamically.
             """;
+
+    // Kept apart from SYSTEM_PROMPT because it is appended AFTER the RAG context,
+    // so it is the last thing the model reads before answering.
+    private static final String LENGTH_RULE = """
+
+            LENGTH AND STYLE RULE (final, overrides everything above):
+            - Answer in AT MOST 3 sentences and about 60 words, in a conversational tone.
+            - Do NOT recite everything the context contains: pick only the most relevant points.
+            - NEVER use markdown tables, headings, or bullet/numbered lists. Write plain prose only.
+            - If the question needs more detail than fits, answer the essentials
+              and end with a short invitation to ask a follow-up question (in the user's language).
+            - The fixed fallback "I don't know based on the available information." may stand alone as a single sentence.
+            """;
+
+    private static final String USER_REMINDER =
+            "(Reply in at most 3 sentences, about 60 words, plain prose, no lists.)";
+
+    private final int maxAnswerChars;
+
+    private static String buildSystemPrompt(String context) {
+        String ragPart = context != null ? "\nRAG Context:\n" + context + "\n" : "";
+        return SYSTEM_PROMPT + ragPart + LENGTH_RULE;
+    }
+
+    private static String buildUserMessage(String lang, String question) {
+        return "[lang=" + lang + "] " + question + "\n\n" + USER_REMINDER;
+    }
 
     /**
      * Main RAG method: question + concatenated context.
@@ -54,14 +85,15 @@ public class LlmService {
     public String askGroq(String question, String context) {
 
         String lang = detectLangLLM(question);
-        String userMsg = "[lang=" + lang + "] " + question;
 
-        return chatClient
+        String answer = chatClient
                 .prompt()
-                .system(SYSTEM_PROMPT + "\nRAG Context:\n" + context)
-                .user(userMsg)
+                .system(buildSystemPrompt(context))
+                .user(buildUserMessage(lang, question))
                 .call()
                 .content();
+
+        return AnswerLimiter.limit(answer, maxAnswerChars, lang);
     }
 
     /**
@@ -70,14 +102,15 @@ public class LlmService {
     public String askGroq(String question) {
 
         String lang = detectLangLLM(question);
-        String userMsg = "[lang=" + lang + "] " + question;
 
-        return chatClient
+        String answer = chatClient
                 .prompt()
-                .system(SYSTEM_PROMPT)
-                .user(userMsg)
+                .system(buildSystemPrompt(null))
+                .user(buildUserMessage(lang, question))
                 .call()
                 .content();
+
+        return AnswerLimiter.limit(answer, maxAnswerChars, lang);
     }
 
     /**
