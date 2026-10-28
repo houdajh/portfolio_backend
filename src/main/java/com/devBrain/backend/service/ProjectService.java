@@ -17,7 +17,7 @@ public class ProjectService {
     }
 
     public List<ProjectCardDto> getAllProjects() {
-        return repository.findAllByOrderByStartDateDesc()
+        return repository.findAllByOrderByIdDesc()
                 .stream()
                 .map(p -> new ProjectCardDto(
                         p.getId(),
@@ -25,8 +25,9 @@ public class ProjectService {
                         p.getTitle(),
                         p.getShortDescription(),
                         p.getTags(),
-                        p.getStartDate(),
-                        p.getEndDate()
+                        p.getGithubUrl(),
+                        p.getDemoUrl(),
+                        p.getStatus()
                 )).toList();
     }
 
@@ -42,7 +43,8 @@ public class ProjectService {
                 p.getDetails(),
                 p.getTags(),
                 p.getGithubUrl(),
-                p.getDemoUrl()
+                p.getDemoUrl(),
+                p.getStatus()
         );
     }
 }

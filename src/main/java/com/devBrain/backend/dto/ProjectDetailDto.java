@@ -8,5 +8,6 @@ public record ProjectDetailDto(
         String details,
         String tags,
         String githubUrl,
-        String demoUrl
+        String demoUrl,
+        String status
 ) { }
